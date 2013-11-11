@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mvc calc</title>
+<meta charset="utf-8">
+<script src="http://jashkenas.github.com/coffee-script/extras/coffee-script.js"></script>
+<script type="text/coffeescript">
+
+###
+ * observable.
+###
+class Observable
+	constructor:(@eventOwner)->
+		@observers = []
+
+	addObserver:(addedOb)->
+		@observers.push(addedOb)
+
+	notifyUpdate:(arg)->
+		ob.update(@eventOwner) for key, ob of @observers
+
+###
+ * model.
+###
+class CalcModel 
+	constructor:->
+		@notifier = new Observable(@)
+		@result   = 0
+		@operand  = ''
+		@operator = '+'
+		@displayPointer = "result"
+
+	addObserver:(view)->
+		@notifier.addObserver view
+
+	calc:(token)->
+		if token.match /^\d|\.$/
+			@operand += token if not (token == "." && @operand.match(/\./))
+			@displayPointer = "operand"
+			@notifier.notifyUpdate()
+			return
+		
+		if token.match /^\+|\-|\*|\/|=$/
+			@compute()
+			@operator = token
+			@operand = ''
+			@displayPointer = "result"
+			@notifier.notifyUpdate()
+			return
+
+		throw 'unkown operator: ' + token
+
+	compute:->
+		numOperand = parseFloat(@operand)
+		if @operator == "+" then @result += numOperand; return
+		if @operator == "-" then @result -= numOperand; return
+		if @operator == "*" then @result *= numOperand; return
+		if @operator == "/" then @result /= numOperand; return
+		if @operator == "=" then return
+
+		throw 'assertion error. unknown operator: ' + @operator
+
+	getDisplay:->
+		return @[@displayPointer]
+
+###
+ * view.
+###
+class CalcView
+	constructor:(@text)->
+	
+	update:(calcModel) ->
+		value = calcModel.getDisplay()
+		
+		digits = value.toString().replace(/^0+[^.]/, '').replace(/\.0+$/, '')
+		if /\^./.test(digits) then digits = '0' + digits
+		@text.value = digits
+
+###
+ * controller.
+###
+class CalcController
+	constructor:(@model)->
+
+	input:(token)-> @model.calc(token)
+
+###
+ * main.
+###
+exports = @
+window.onload = ->
+	model = new CalcModel()
+	view = new CalcView(document.calcForm.display)
+	model.addObserver view
+	controller = new CalcController(model)
+
+	exports.controller = controller
+
+
+</script>
+</head>
+<body>
+
+<a href="http://d.hatena.ne.jp/kitokitoki/20101226/p1">http://d.hatena.ne.jp/kitokitoki/20101226/p1</a> を参考させていただきました。<br>
+<br>
+<form name="calcForm">
+<input type="text" value="0" name="display"><br>
+<input type="button" value="7" name="seven" onclick="controller.input('7')">
+<input type="button" value="8" name="eight" onclick="controller.input('8')">
+<input type="button" value="9" name="nine"  onclick="controller.input('9')">
+<input type="button" value="+" name="plus"  onclick="controller.input('+')"><br>
+<input type="button" value="4" name="four"  onclick="controller.input('4')">
+<input type="button" value="5" name="five"  onclick="controller.input('5')">
+<input type="button" value="6" name="six"   onclick="controller.input('6')">
+<input type="button" value="-" name="minus" onclick="controller.input('-')"><br>
+<input type="button" value="1" name="one"   onclick="controller.input('1')">
+<input type="button" value="2" name="two"   onclick="controller.input('2')">
+<input type="button" value="3" name="three" onclick="controller.input('3')">
+<input type="button" value="*" name="mul"   onclick="controller.input('*')"><br>
+<input type="button" value="0" name="zero"  onclick="controller.input('0')">
+<input type="button" value="." name="point" onclick="controller.input('.')">
+<input type="button" value="=" name="equal" onclick="controller.input('=')">
+<input type="button" value="/" name="div"   onclick="controller.input('/')">
+</form>
+
+</body>
+</html>
